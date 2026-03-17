@@ -1,4 +1,4 @@
-# ⚡ F9-Paste2Project
+# ⚡ f9-Paste2Project
 
 > Paste your folder structure → Press a key → Your entire project is created instantly 🚀
 
@@ -6,7 +6,7 @@
 
 ## 🚀 Overview
 
-**F9-Paste2Project** is a powerful CLI tool that converts a pasted tree structure into real files and directories on your system.
+**f9** is a lightweight CLI tool that converts a pasted tree structure into real files and directories on your system.
 
 No more manually creating folders and files.
 Just paste → run → done ✅
@@ -20,15 +20,15 @@ Just paste → run → done ✅
 * 🌳 Supports tree-style input (`├──`, `│`, etc.)
 * ⚡ Fast and lightweight
 * 🧠 Smart indentation detection
-* 🪟 Windows support with installer
-* 💻 Simple CLI usage
+* 🪟 Windows CLI support
+* 💻 Zero setup after install
 
 ---
 
 ## 📦 Project Structure
 
 ```
-F9-Paste2Project/
+f9/
 ├── f9.py
 ├── f9_Installer.bat
 └── README.md
@@ -41,28 +41,43 @@ F9-Paste2Project/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/F9-Paste2Project.git
-cd F9-Paste2Project
+git clone https://github.com/your-username/f9.git
+cd f9
 ```
 
 ---
 
-### 2. Run Installer
+## 🔧 Automatic Setup (Recommended)
+
+Run the installer:
 
 ```bash
 f9_Installer.bat
 ```
 
-This will:
+### ✅ What it does
 
-* Add `f9` as a global command
-* Allow you to run it from anywhere
+* Copies files to:
+
+  ```
+  C:\Users\<your-user>\AppData\Local\f9
+  ```
+* Creates `f9` command (`f9.bat`)
+* Safely adds the folder to **User PATH (no truncation)**
+
+---
+
+### ⚠️ Important
+
+After installation:
+
+👉 **Restart your terminal (CMD / PowerShell / VS Code)**
 
 ---
 
 ## ▶️ Usage
 
-### Step 1: Run Command
+### Step 1: Run command
 
 ```bash
 f9
@@ -70,7 +85,7 @@ f9
 
 ---
 
-### Step 2: Paste Your Structure
+### Step 2: Paste structure
 
 Example:
 
@@ -86,7 +101,7 @@ my-app/
 
 ---
 
-### Step 3: Finish Input
+### Step 3: Finish input
 
 Press:
 
@@ -127,7 +142,7 @@ FILE: my-app/package.json
 
 ## 📌 Example Use Cases
 
-* 🚀 Start new projects quickly
+* 🚀 Start new projects instantly
 * 📁 Recreate GitHub repo structures
 * 🧪 Testing folder layouts
 * 👨‍💻 Competitive programming templates
@@ -135,22 +150,112 @@ FILE: my-app/package.json
 
 ---
 
-## ⚠️ Important Notes
+## ⚠️ Notes
 
 * Use proper tree format
 * End folders with `/`
 * Avoid invalid file names
-* Works best with consistent indentation
+* Restart terminal after install
+
+---
+
+## 🛠️ Troubleshooting
+
+### ❌ `f9` not recognized
+
+* Restart terminal (CMD / PowerShell / VS Code)
+* Ensure PATH contains:
+
+  ```
+  C:\Users\<your-user>\AppData\Local\f9
+  ```
+* Run this to verify:
+
+  ```
+  echo %PATH%
+  ```
+* If missing, add manually via Environment Variables
+
+---
+
+### ⚠️ PATH truncated or broken
+
+* Avoid using `setx PATH` (it truncates long PATH values)
+* Use installer or registry method instead
+* Remove broken entries like:
+
+  ```
+  C:\Users\<your-user>\AppDat
+  ```
+
+---
+
+### ❌ Command works only with full path
+
+* Example:
+
+  ```
+  C:\Users\<your-user>\AppData\Local\f9\f9.bat
+  ```
+* This means PATH is not set correctly
+* Fix by adding the folder to PATH
+
+---
+
+### ❌ Permission issues
+
+* Run terminal as Administrator
+* Ensure you have write access to target directory
+
+---
+
+### ❌ Structure not creating correctly
+
+* Ensure proper tree format:
+
+  * Use `├──`, `│`, `└──`
+  * End folders with `/`
+* Avoid extra spaces or invalid characters
+
+---
+
+### ❌ Nothing happens after paste
+
+* Make sure to press:
+
+  ```
+  CTRL + Z
+  ENTER
+  ```
+* This signals end of input in Windows
+
+---
+
+### ✅ Still not working?
+
+* Re-run installer
+* Restart system
+* Check Python is installed:
+
+  ```
+  python --version
+  ```
+
+---
+
+### ⚠️ Windows PATH issues
+
+This tool avoids common `setx` truncation issues by safely updating the registry.
 
 ---
 
 ## 🔮 Future Improvements
 
 * Linux / Mac support
-* JSON / YAML input support
+* JSON / YAML input
 * GUI version
 * VS Code extension
-* Template saving feature
+* Template saving
 
 ---
 
@@ -158,17 +263,11 @@ FILE: my-app/package.json
 
 Pull requests are welcome!
 
-Feel free to:
-
-* Improve parsing logic
-* Add new features
-* Optimize performance
-
 ---
 
 ## ⭐ Support
 
-If you found this useful, give it a ⭐ on GitHub!
+If you like this project, give it a ⭐ on GitHub!
 
 ---
 
