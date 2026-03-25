@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-tree_creator.py — Create directory/file structures from tree-format input.
+f9.py — Create directory/file structures from tree-format input.
 
 Usage:
-  python tree_creator.py                        # paste from stdin (interactive)
-  python tree_creator.py -f structure.txt       # read from file
-  python tree_creator.py -c                     # read from clipboard
-  python tree_creator.py --dry-run              # preview without creating
-  python tree_creator.py --undo                 # remove last created structure
-  python tree_creator.py -o /some/base/dir      # output to specific base directory
-  python tree_creator.py -q                     # quiet mode (no per-item output)
-  python tree_creator.py -v                     # verbose mode (extra detail)
-  python tree_creator.py --log output.log       # also write log to file
+  python f9.py                        # paste from stdin (interactive)
+  python f9.py -f structure.txt       # read from file
+  python f9.py -c                     # read from clipboard
+  python f9.py --dry-run              # preview without creating
+  python f9.py --undo                 # remove last created structure
+  python f9.py -o /some/base/dir      # output to specific base directory
+  python f9.py -q                     # quiet mode (no per-item output)
+  python f9.py -v                     # verbose mode (extra detail)
+  python f9.py --log output.log       # also write log to file
 """
 
 import os
