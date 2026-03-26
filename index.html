@@ -3,559 +3,672 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>f9 — Paste2Project</title>
+<title>f9-Paste2Project</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500;600&family=Figtree:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg:        #080b10;
-    --surface:   #0d1117;
-    --card:      #111620;
-    --border:    #1e2733;
-    --border2:   #2a3447;
-    --text:      #e2e8f0;
-    --muted:     #64748b;
-    --accent:    #00d4ff;
-    --accent2:   #7c3aed;
-    --accent3:   #10b981;
-    --warn:      #f59e0b;
-    --red:       #ef4444;
-    --mono:      'JetBrains Mono', monospace;
-    --sans:      'DM Sans', sans-serif;
-    --display:   'Syne', sans-serif;
-    --radius:    12px;
-    --glow:      0 0 40px rgba(0,212,255,.18);
-    --glow2:     0 0 80px rgba(124,58,237,.15);
-  }
+:root {
+  --bg:        #F5F2ED;
+  --bg2:       #EDE9E2;
+  --surface:   #FAFAF8;
+  --card:      #FFFFFF;
+  --border:    #D8D2C8;
+  --border2:   #C8C0B4;
+  --text:      #1A1714;
+  --text2:     #3D3830;
+  --muted:     #8A8278;
+  --accent:    #1A1714;
+  --ink:       #2B2520;
+  --copper:    #8B5E3C;
+  --sage:      #4A6741;
+  --slate:     #3D5068;
+  --red:       #C0392B;
+  --mono:      'Geist Mono', monospace;
+  --sans:      'Figtree', sans-serif;
+  --serif:     'Instrument Serif', serif;
+  --radius:    4px;
+  --radius-lg: 8px;
+}
 
-  html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    line-height: 1.6;
-    overflow-x: hidden;
-  }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
 
-  /* ─── Noise grain overlay ─── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
-    pointer-events: none; z-index: 9999; opacity: .5;
-  }
+/* ─── Subtle paper texture ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999;
+}
 
-  /* ─── Grid bg ─── */
-  .grid-bg {
-    position: absolute; inset: 0; z-index: 0;
-    background-image:
-      linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
-    background-size: 48px 48px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%);
-  }
+/* ─── Ruled line decoration ─── */
+.ruled {
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    rgba(26,23,20,.05) 27px,
+    rgba(26,23,20,.05) 28px
+  );
+}
 
-  /* ─── NAV ─── */
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 max(24px, 5vw);
-    height: 60px;
-    background: rgba(8,11,16,.85);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border);
-  }
-  .nav-logo {
-    font-family: var(--mono);
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: -.02em;
-  }
-  .nav-logo span { color: var(--muted); }
-  .nav-links { display: flex; gap: 28px; }
-  .nav-links a {
-    font-size: .82rem;
-    font-weight: 500;
-    color: var(--muted);
-    text-decoration: none;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    transition: color .2s;
-  }
-  .nav-links a:hover { color: var(--text); }
-  .nav-cta {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 7px 18px;
-    background: var(--accent);
-    color: #000;
-    font-family: var(--mono);
-    font-size: .78rem;
-    font-weight: 700;
-    border-radius: 6px;
-    text-decoration: none;
-    letter-spacing: .04em;
-    transition: opacity .2s, box-shadow .2s;
-  }
-  .nav-cta:hover { opacity: .88; box-shadow: 0 0 24px rgba(0,212,255,.4); }
+/* ─── NAV ─── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 max(32px, 6vw);
+  height: 58px;
+  background: rgba(245,242,237,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -.02em;
+  display: flex; align-items: center; gap: 10px;
+}
+.nav-logo-mark {
+  width: 28px; height: 28px;
+  background: var(--text);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--bg);
+  font-size: .78rem;
+  font-weight: 600;
+}
+.nav-logo-sub { color: var(--muted); font-weight: 400; }
+.nav-links { display: flex; gap: 32px; }
+.nav-links a {
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  transition: color .2s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 16px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--mono);
+  font-size: .76rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  text-decoration: none;
+  letter-spacing: .03em;
+  transition: opacity .2s;
+}
+.nav-cta:hover { opacity: .78; }
 
-  /* ─── HERO ─── */
-  #hero {
-    position: relative;
-    min-height: 100vh;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center;
-    padding: 120px max(24px, 5vw) 80px;
-    overflow: hidden;
-  }
-  .spotlight {
-    position: absolute;
-    width: 900px; height: 900px;
-    background: radial-gradient(circle, rgba(0,212,255,.07) 0%, transparent 65%);
-    top: -200px; left: 50%; transform: translateX(-50%);
-    pointer-events: none;
-  }
-  .spotlight2 {
-    position: absolute;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(124,58,237,.07) 0%, transparent 65%);
-    top: 10%; right: -100px;
-    pointer-events: none;
-  }
+/* ─── HERO ─── */
+#hero {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: 100px max(32px, 6vw) 80px;
+  gap: 80px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-bg-line {
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 1px;
+  background: var(--border);
+  opacity: .6;
+}
+.hero-bg-number {
+  position: absolute;
+  right: max(32px, 6vw);
+  bottom: 60px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14vw;
+  color: rgba(26,23,20,.04);
+  line-height: 1;
+  user-select: none;
+  letter-spacing: -.04em;
+}
+.hero-left { position: relative; z-index: 1; }
 
-  .badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 5px 14px;
-    border: 1px solid rgba(0,212,255,.25);
-    border-radius: 99px;
-    font-family: var(--mono);
-    font-size: .72rem;
-    color: var(--accent);
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    margin-bottom: 28px;
-    animation: fadeUp .6s ease both;
-  }
-  .badge-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--mono);
+  font-size: .7rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  width: 100%;
+  animation: fadeUp .5s ease both;
+}
+.eyebrow-dot {
+  width: 5px; height: 5px;
+  background: var(--sage);
+  border-radius: 50%;
+  animation: blink 2.4s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+h1 {
+  font-family: var(--serif);
+  font-size: clamp(3rem, 5.5vw, 5rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+  margin-bottom: 28px;
+  animation: fadeUp .6s ease .08s both;
+}
+h1 em {
+  font-style: italic;
+  color: var(--copper);
+}
 
-  h1 {
-    font-family: var(--display);
-    font-size: clamp(2.6rem, 7vw, 5.5rem);
-    font-weight: 800;
-    line-height: 1.05;
-    letter-spacing: -.03em;
-    margin-bottom: 20px;
-    animation: fadeUp .7s ease .1s both;
-  }
-  h1 .hl { color: var(--accent); }
-  h1 .hl2 { color: var(--accent2); }
+.hero-sub {
+  font-size: 1rem;
+  color: var(--muted);
+  max-width: 400px;
+  margin-bottom: 40px;
+  line-height: 1.75;
+  font-weight: 400;
+  animation: fadeUp .6s ease .16s both;
+}
+.hero-sub strong { color: var(--text2); font-weight: 600; }
 
-  .hero-sub {
-    font-size: clamp(.95rem, 2vw, 1.15rem);
-    color: var(--muted);
-    max-width: 520px;
-    margin: 0 auto 36px;
-    animation: fadeUp .7s ease .2s both;
-  }
+.hero-ctas {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  animation: fadeUp .6s ease .24s both;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--sans);
+  font-size: .85rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  text-decoration: none;
+  letter-spacing: .01em;
+  transition: opacity .15s, transform .15s;
+}
+.btn-primary:hover { opacity: .82; transform: translateY(-1px); }
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: .85rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  text-decoration: none;
+  letter-spacing: .01em;
+  transition: border-color .2s, background .2s;
+  background: transparent;
+}
+.btn-ghost:hover { border-color: var(--text); background: rgba(26,23,20,.03); }
 
-  .hero-ctas {
-    display: flex; flex-wrap: wrap; gap: 12px;
-    justify-content: center;
-    animation: fadeUp .7s ease .3s both;
-    margin-bottom: 64px;
-  }
-  .btn-primary {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 13px 28px;
-    background: var(--accent);
-    color: #000;
-    font-family: var(--mono);
-    font-size: .85rem;
-    font-weight: 700;
-    border-radius: var(--radius);
-    text-decoration: none;
-    letter-spacing: .03em;
-    transition: transform .15s, box-shadow .2s;
-  }
-  .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--glow); }
-  .btn-ghost {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 13px 28px;
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: .85rem;
-    font-weight: 500;
-    border-radius: var(--radius);
-    text-decoration: none;
-    letter-spacing: .03em;
-    transition: border-color .2s, background .2s;
-    background: rgba(255,255,255,.02);
-  }
-  .btn-ghost:hover { border-color: var(--accent); background: rgba(0,212,255,.04); }
+/* hero stats row */
+.hero-stats {
+  display: flex; gap: 36px;
+  margin-top: 48px;
+  padding-top: 36px;
+  border-top: 1px solid var(--border);
+  animation: fadeUp .6s ease .32s both;
+}
+.stat-val {
+  font-family: var(--serif);
+  font-size: 1.9rem;
+  font-style: italic;
+  color: var(--copper);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-label { font-size: .75rem; color: var(--muted); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
 
-  /* ─── TERMINAL ─── */
-  .terminal-wrap {
-    width: 100%; max-width: 640px;
-    animation: fadeUp .8s ease .4s both;
-  }
-  .terminal {
-    background: #0a0e14;
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    overflow: hidden;
-    box-shadow: 0 24px 80px rgba(0,0,0,.6), var(--glow);
-    text-align: left;
-  }
-  .term-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 16px;
-    background: #0d1117;
-    border-bottom: 1px solid var(--border);
-  }
-  .term-dot { width: 12px; height: 12px; border-radius: 50%; }
-  .td-red { background: #ff5f57; }
-  .td-yellow { background: #febc2e; }
-  .td-green { background: #28c840; }
-  .term-title { font-family: var(--mono); font-size: .72rem; color: var(--muted); margin-left: auto; }
-  .term-body {
-    padding: 20px 24px;
-    font-family: var(--mono);
-    font-size: .82rem;
-    line-height: 1.8;
-    min-height: 200px;
-  }
-  .term-prompt { color: var(--accent3); }
-  .term-cmd { color: var(--text); }
-  .term-out { color: var(--muted); }
-  .term-tree { color: #a78bfa; }
-  .term-success { color: var(--accent3); }
-  .term-cursor {
-    display: inline-block;
-    width: 8px; height: 14px;
-    background: var(--accent);
-    vertical-align: middle;
-    animation: blink .9s step-end infinite;
-  }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+/* ─── TERMINAL ─── */
+.hero-right { position: relative; z-index: 1; animation: fadeUp .7s ease .12s both; }
+.terminal {
+  background: var(--ink);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(26,23,20,.18), 0 8px 24px rgba(26,23,20,.1);
+}
+.term-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 18px;
+  background: rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.term-dot { width: 11px; height: 11px; border-radius: 50%; }
+.td-red { background: #E05252; }
+.td-yellow { background: #E0C452; }
+.td-green { background: #52B057; }
+.term-title { font-family: var(--mono); font-size: .69rem; color: rgba(255,255,255,.28); margin-left: auto; letter-spacing: .05em; }
+.term-body {
+  padding: 24px 28px;
+  font-family: var(--mono);
+  font-size: .8rem;
+  line-height: 1.9;
+  min-height: 220px;
+  color: rgba(255,255,255,.85);
+}
+.term-prompt { color: #7DB87D; }
+.term-cmd { color: #D4C5A9; }
+.term-out { color: rgba(255,255,255,.35); }
+.term-tree { color: #9BAFC7; }
+.term-success { color: #7DB87D; }
+.term-cursor {
+  display: inline-block; width: 7px; height: 13px;
+  background: #D4C5A9; vertical-align: middle;
+  animation: cur .85s step-end infinite;
+}
+@keyframes cur { 0%,100%{opacity:1} 50%{opacity:0} }
 
-  /* typing animation */
-  .type-line { overflow: hidden; white-space: nowrap; }
-  #line1 { animation: type1 .6s steps(4,end) 1s both; }
-  #line2 { animation: type1 .8s steps(8,end) 1.8s both; }
-  #line3 { animation: fadeIn .3s ease 3s both; }
-  #line4 { animation: fadeIn .3s ease 3.3s both; }
-  #line5 { animation: fadeIn .3s ease 3.6s both; }
-  #line6 { animation: fadeIn .3s ease 3.9s both; }
-  #line7 { animation: fadeIn .3s ease 4.2s both; }
-  #line8 { animation: fadeIn .3s ease 4.5s both; }
-  #line9 { animation: fadeIn .3s ease 4.8s both; }
-  #line10{ animation: fadeIn .4s ease 5.1s both; }
-  @keyframes type1 { from{width:0} to{width:100%} }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+.type-line { overflow: hidden; white-space: nowrap; }
+#line1 { animation: type1 .5s steps(3,end) .8s both; }
+#line2 { animation: type1 .9s steps(10,end) 1.5s both; }
+#line3 { animation: fadeIn .25s ease 2.7s both; }
+#line4 { animation: fadeIn .25s ease 3s both; }
+#line5 { animation: fadeIn .25s ease 3.25s both; }
+#line6 { animation: fadeIn .25s ease 3.5s both; }
+#line7 { animation: fadeIn .25s ease 3.75s both; }
+#line8 { animation: fadeIn .25s ease 4s both; }
+#line9 { animation: fadeIn .25s ease 4.25s both; }
+#line10{ animation: fadeIn .35s ease 4.6s both; }
+@keyframes type1 { from{width:0} to{width:100%} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:none} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
 
-  /* ─── SECTIONS COMMON ─── */
-  section { padding: 96px max(24px, 5vw); }
-  .section-label {
-    font-family: var(--mono);
-    font-size: .72rem;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 16px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .section-label::before { content:''; display:block; width:24px; height:1px; background:var(--accent); }
-  h2 {
-    font-family: var(--display);
-    font-size: clamp(1.8rem, 4vw, 2.8rem);
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -.025em;
-    margin-bottom: 16px;
-  }
-  .section-sub { color: var(--muted); max-width: 480px; font-size: .95rem; }
+/* terminal label */
+.term-label {
+  margin-top: 20px;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--muted);
+  letter-spacing: .06em;
+}
+.term-label::before,
+.term-label::after { content:''; flex:1; height:1px; background:var(--border); }
 
-  /* ─── HOW IT WORKS ─── */
-  #how { background: var(--surface); }
-  .steps-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 2px;
-    margin-top: 56px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .step-card {
-    background: var(--card);
-    padding: 40px 32px;
-    position: relative;
-    transition: background .2s;
-  }
-  .step-card:hover { background: #141b27; }
-  .step-num {
-    font-family: var(--mono);
-    font-size: 2.8rem;
-    font-weight: 700;
-    color: var(--border2);
-    line-height: 1;
-    margin-bottom: 20px;
-    letter-spacing: -.04em;
-  }
-  .step-card:hover .step-num { color: var(--accent); transition: color .25s; }
-  .step-card h3 {
-    font-family: var(--display);
-    font-size: 1.15rem;
-    font-weight: 700;
-    margin-bottom: 12px;
-  }
-  .step-card p { color: var(--muted); font-size: .88rem; line-height: 1.65; }
-  .step-code {
-    display: inline-block;
-    margin-top: 16px;
-    padding: 8px 14px;
-    background: #0a0e14;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-family: var(--mono);
-    font-size: .8rem;
-    color: var(--accent);
-  }
-  .step-key {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 16px;
-    padding: 8px 14px;
-    background: #0a0e14;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-family: var(--mono);
-    font-size: .8rem;
-    color: var(--warn);
-  }
-  .kbd {
-    padding: 3px 8px;
-    background: var(--border2);
-    border-radius: 4px;
-    font-size: .75rem;
-  }
+/* ─── SECTION COMMON ─── */
+section { padding: 96px max(32px, 6vw); }
+.section-header { margin-bottom: 64px; }
+.section-label {
+  font-family: var(--mono);
+  font-size: .68rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.section-label::after { content:''; display:block; flex:1; height:1px; background:var(--border); max-width:80px; }
+h2 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  margin-bottom: 14px;
+}
+h2 em { font-style: italic; color: var(--copper); }
+.section-sub { color: var(--muted); max-width: 440px; font-size: .92rem; line-height: 1.7; }
 
-  /* ─── FEATURES ─── */
-  #features { background: var(--bg); }
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 16px;
-    margin-top: 56px;
-  }
-  .feat-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 28px;
-    transition: border-color .2s, transform .2s, box-shadow .2s;
-    cursor: default;
-  }
-  .feat-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0,212,255,.08);
-  }
-  .feat-icon {
-    width: 40px; height: 40px;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(0,212,255,.08);
-    border-radius: 10px;
-    font-size: 1.2rem;
-    margin-bottom: 16px;
-  }
-  .feat-card h3 { font-size: .95rem; font-weight: 600; margin-bottom: 8px; }
-  .feat-card p { color: var(--muted); font-size: .82rem; line-height: 1.6; }
+/* ─── HOW IT WORKS ─── */
+#how { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+@media(max-width: 700px) { .steps-grid { grid-template-columns: 1fr; } }
+.step-card {
+  background: var(--card);
+  padding: 44px 36px;
+  border-right: 1px solid var(--border);
+  position: relative;
+  transition: background .2s;
+}
+.step-card:last-child { border-right: none; }
+.step-card:hover { background: #FDFCFB; }
+.step-num {
+  font-family: var(--mono);
+  font-size: .7rem;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  display: flex; align-items: center; gap: 8px;
+}
+.step-num::before {
+  content: '';
+  display: block;
+  width: 20px; height: 1px;
+  background: var(--border2);
+}
+.step-card h3 {
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  font-weight: 400;
+  margin-bottom: 14px;
+  letter-spacing: -.01em;
+}
+.step-card p { color: var(--muted); font-size: .86rem; line-height: 1.7; }
+.step-code {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 8px 14px;
+  background: var(--ink);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: .78rem;
+  color: #D4C5A9;
+  letter-spacing: .02em;
+}
+.step-key {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 20px;
+  padding: 8px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: .78rem;
+  color: var(--text2);
+}
+.kbd {
+  padding: 2px 7px;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  font-size: .72rem;
+  font-family: var(--mono);
+  box-shadow: 0 1px 0 var(--border2);
+}
 
-  /* ─── DEMO ─── */
-  #demo { background: var(--surface); }
-  .demo-split {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-top: 56px;
-  }
-  @media(max-width:680px){ .demo-split{ grid-template-columns:1fr; } }
-  .demo-box { background: #0a0e14; border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; }
-  .demo-box-header {
-    padding: 10px 16px;
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    font-family: var(--mono);
-    font-size: .72rem;
-    color: var(--muted);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .demo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border2); }
-  .demo-dot.in { background: var(--warn); }
-  .demo-dot.out { background: var(--accent3); }
-  .demo-body { padding: 20px 22px; font-family: var(--mono); font-size: .8rem; line-height: 1.9; }
-  .demo-tree { color: #a78bfa; }
-  .demo-file { color: #60a5fa; }
-  .demo-arrow { display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--accent); opacity: .6; }
+/* ─── FEATURES ─── */
+#features { background: var(--surface); }
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.feat-card {
+  background: var(--card);
+  padding: 32px 28px;
+  transition: background .2s;
+  cursor: default;
+}
+.feat-card:hover { background: var(--bg); }
+.feat-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: .65rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px 8px;
+  margin-bottom: 18px;
+}
+.feat-card h3 { font-size: .95rem; font-weight: 600; margin-bottom: 10px; letter-spacing: -.01em; }
+.feat-card p { color: var(--muted); font-size: .82rem; line-height: 1.65; }
 
-  /* ─── USE CASES ─── */
-  #usecases { background: var(--bg); }
-  .usecase-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-    margin-top: 56px;
-  }
-  .uc-card {
-    padding: 24px 20px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--card);
-    transition: border-color .2s, background .2s;
-  }
-  .uc-card:hover { border-color: var(--accent2); background: rgba(124,58,237,.05); }
-  .uc-emoji { font-size: 1.5rem; margin-bottom: 12px; }
-  .uc-card h3 { font-size: .88rem; font-weight: 600; margin-bottom: 6px; }
-  .uc-card p { color: var(--muted); font-size: .78rem; line-height: 1.55; }
+/* ─── DEMO ─── */
+#demo { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.demo-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media(max-width:680px){ .demo-split{ grid-template-columns:1fr; } }
+.demo-box { background: var(--ink); border-radius: var(--radius-lg); overflow: hidden; }
+.demo-box-header {
+  padding: 12px 18px;
+  background: rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  font-family: var(--mono);
+  font-size: .69rem;
+  color: rgba(255,255,255,.3);
+  display: flex; align-items: center; gap: 10px;
+  letter-spacing: .07em; text-transform: uppercase;
+}
+.demo-badge {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+.demo-badge.in { background: #D4A94E; }
+.demo-badge.out { background: #7DB87D; }
+.demo-body {
+  padding: 24px 26px;
+  font-family: var(--mono);
+  font-size: .79rem;
+  line-height: 1.95;
+  color: rgba(255,255,255,.7);
+}
+.demo-tree { color: #9BAFC7; }
+.demo-file { color: rgba(255,255,255,.55); }
 
-  /* ─── WHY F9 ─── */
-  #why { background: var(--surface); }
-  .why-grid {
-    display: grid;
-    grid-template-columns: repeat(3,1fr);
-    gap: 1px;
-    margin-top: 56px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  @media(max-width:600px){ .why-grid{ grid-template-columns:1fr; } }
-  .why-card {
-    background: var(--card);
-    padding: 40px 32px;
-    text-align: center;
-    transition: background .2s;
-  }
-  .why-card:hover { background: #141b27; }
-  .why-num {
-    font-family: var(--mono);
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: var(--accent);
-    margin-bottom: 12px;
-  }
-  .why-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 10px; }
-  .why-card p { color: var(--muted); font-size: .83rem; line-height: 1.65; }
+/* ─── USE CASES ─── */
+#usecases { background: var(--surface); }
+.usecase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+}
+.uc-card {
+  padding: 28px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  transition: border-color .2s, transform .2s;
+}
+.uc-card:hover { border-color: var(--text); transform: translateY(-2px); }
+.uc-label {
+  font-family: var(--mono);
+  font-size: .62rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.uc-card h3 { font-size: .92rem; font-weight: 600; margin-bottom: 8px; letter-spacing: -.01em; }
+.uc-card p { color: var(--muted); font-size: .8rem; line-height: 1.6; }
 
-  /* ─── INSTALL ─── */
-  #install { background: var(--bg); }
-  .install-box {
-    margin-top: 56px;
-    background: #0a0e14;
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    overflow: hidden;
-    max-width: 700px;
-    box-shadow: var(--glow2), var(--glow);
-  }
-  .install-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 20px;
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-  }
-  .install-title { font-family: var(--mono); font-size: .75rem; color: var(--muted); }
-  .copy-btn {
-    display: flex; align-items: center; gap: 6px;
-    padding: 5px 12px;
-    background: transparent;
-    border: 1px solid var(--border2);
-    border-radius: 6px;
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: .72rem;
-    cursor: pointer;
-    transition: border-color .15s, color .15s;
-  }
-  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .install-body { padding: 24px 28px; font-family: var(--mono); font-size: .85rem; line-height: 2; }
-  .i-comment { color: var(--muted); }
-  .i-cmd { color: var(--accent); }
-  .i-val { color: #a78bfa; }
-  .i-run { color: var(--accent3); }
+/* ─── WHY F9 ─── */
+#why {
+  background: var(--ink);
+  color: rgba(245,242,237,.9);
+  border-top: 1px solid rgba(255,255,255,.06);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+#why .section-label { color: rgba(255,255,255,.3); }
+#why .section-label::after { background: rgba(255,255,255,.1); }
+#why h2 { color: var(--bg); }
+#why h2 em { color: #C4A87A; }
+#why .section-sub { color: rgba(245,242,237,.45); }
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 1px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+@media(max-width:600px){ .why-grid{ grid-template-columns:1fr; } }
+.why-card {
+  background: var(--ink);
+  padding: 44px 36px;
+  text-align: center;
+  transition: background .2s;
+}
+.why-card:hover { background: rgba(255,255,255,.03); }
+.why-num {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 3rem;
+  color: #C4A87A;
+  margin-bottom: 14px;
+  line-height: 1;
+}
+.why-card h3 { font-size: .95rem; font-weight: 600; margin-bottom: 12px; color: rgba(245,242,237,.9); }
+.why-card p { color: rgba(245,242,237,.4); font-size: .83rem; line-height: 1.7; }
 
-  /* ─── ROADMAP ─── */
-  #roadmap { background: var(--surface); }
-  .road-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
-    margin-top: 56px;
-  }
-  .road-card {
-    border: 1px dashed var(--border2);
-    border-radius: var(--radius);
-    padding: 24px 20px;
-    background: rgba(124,58,237,.03);
-    position: relative;
-  }
-  .road-tag {
-    display: inline-flex;
-    padding: 3px 10px;
-    border-radius: 99px;
-    font-family: var(--mono);
-    font-size: .65rem;
-    font-weight: 600;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
-  .tag-soon { background: rgba(0,212,255,.1); color: var(--accent); border: 1px solid rgba(0,212,255,.2); }
-  .tag-planned { background: rgba(124,58,237,.1); color: #a78bfa; border: 1px solid rgba(124,58,237,.2); }
-  .tag-idea { background: rgba(100,116,139,.1); color: var(--muted); border: 1px solid var(--border); }
-  .road-card h3 { font-size: .9rem; font-weight: 600; margin-bottom: 8px; }
-  .road-card p { color: var(--muted); font-size: .78rem; line-height: 1.55; }
+/* ─── INSTALL ─── */
+#install { background: var(--bg); }
+.install-box {
+  max-width: 680px;
+  background: var(--ink);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(26,23,20,.15);
+}
+.install-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px;
+  background: rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.install-title { font-family: var(--mono); font-size: .7rem; color: rgba(255,255,255,.3); letter-spacing: .08em; text-transform: uppercase; }
+.copy-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 4px;
+  color: rgba(255,255,255,.35);
+  font-family: var(--mono);
+  font-size: .7rem;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.copy-btn:hover { border-color: rgba(255,255,255,.3); color: rgba(255,255,255,.65); }
+.install-body { padding: 28px 32px; font-family: var(--mono); font-size: .82rem; line-height: 2.1; }
+.i-comment { color: rgba(255,255,255,.25); }
+.i-cmd { color: #9BAFC7; }
+.i-val { color: #C4A87A; }
+.i-run { color: #7DB87D; }
 
-  /* ─── FOOTER ─── */
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 40px max(24px, 5vw);
-    display: flex; flex-wrap: wrap;
-    align-items: center; justify-content: space-between;
-    gap: 20px;
-  }
-  .footer-logo { font-family: var(--mono); font-size: .95rem; color: var(--accent); font-weight: 700; }
-  .footer-logo span { color: var(--muted); }
-  .footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
-  .footer-links a { font-size: .8rem; color: var(--muted); text-decoration: none; transition: color .15s; }
-  .footer-links a:hover { color: var(--text); }
-  .footer-right { font-size: .78rem; color: var(--muted); }
+/* ─── ROADMAP ─── */
+#roadmap { background: var(--bg2); border-top: 1px solid var(--border); }
+.road-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+}
+.road-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  background: var(--card);
+  position: relative;
+}
+.road-tag {
+  display: inline-flex;
+  padding: 3px 9px;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.tag-soon { background: rgba(74,103,65,.1); color: var(--sage); border: 1px solid rgba(74,103,65,.2); }
+.tag-planned { background: rgba(61,80,104,.1); color: var(--slate); border: 1px solid rgba(61,80,104,.2); }
+.tag-idea { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+.road-card h3 { font-size: .9rem; font-weight: 600; margin-bottom: 8px; letter-spacing: -.01em; }
+.road-card p { color: var(--muted); font-size: .8rem; line-height: 1.6; }
 
-  /* ─── Scrollbar ─── */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+/* ─── FOOTER ─── */
+footer {
+  background: var(--ink);
+  color: rgba(245,242,237,.5);
+  padding: 40px max(32px, 6vw);
+  display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.footer-logo {
+  font-family: var(--mono); font-size: .9rem;
+  color: rgba(245,242,237,.7); font-weight: 500;
+  display: flex; align-items: center; gap: 10px;
+}
+.footer-logo-mark {
+  width: 24px; height: 24px;
+  background: rgba(245,242,237,.08);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 600;
+  color: rgba(245,242,237,.45);
+}
+.footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
+.footer-links a { font-size: .78rem; color: rgba(245,242,237,.3); text-decoration: none; transition: color .15s; }
+.footer-links a:hover { color: rgba(245,242,237,.7); }
+.footer-right { font-size: .75rem; color: rgba(245,242,237,.25); font-family: var(--mono); }
 
-  /* ─── Responsive nav ─── */
-  @media(max-width:600px){
-    .nav-links { display:none; }
-    h1 { font-size: 2.4rem; }
-  }
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ─── Responsive ─── */
+@media(max-width: 900px) {
+  #hero { grid-template-columns: 1fr; gap: 48px; text-align: center; }
+  .hero-bg-line, .hero-bg-number { display: none; }
+  .hero-sub { margin-left: auto; margin-right: auto; }
+  .hero-ctas { justify-content: center; }
+  .hero-stats { justify-content: center; }
+  .eyebrow { justify-content: center; }
+}
+@media(max-width:600px){
+  .nav-links { display:none; }
+  h1 { font-size: 2.6rem; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .why-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">f9<span>_paste2project</span></div>
+  <div class="nav-logo">
+    <div class="nav-logo-mark">f9</div>
+    <span class="nav-logo-sub">paste2project</span>
+  </div>
   <div class="nav-links">
     <a href="#how">How it works</a>
     <a href="#features">Features</a>
@@ -563,43 +676,59 @@
     <a href="#roadmap">Roadmap</a>
   </div>
   <a href="https://github.com/forex911/F9-Paste2Project" class="nav-cta" target="_blank">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/></svg>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/></svg>
     GitHub
   </a>
 </nav>
 
 <!-- ────────── HERO ────────── -->
-<section id="hero">
-  <div class="grid-bg"></div>
-  <div class="spotlight"></div>
-  <div class="spotlight2"></div>
+<section id="hero" class="ruled">
+  <div class="hero-bg-line"></div>
+  <div class="hero-bg-number">f9</div>
 
-  <div class="badge" style="z-index:1">
-    <span class="badge-dot"></span>
-    v1.0 · Windows CLI · Open Source
+  <div class="hero-left">
+    <div class="eyebrow">
+      <span class="eyebrow-dot"></span>
+      v1.0 · Windows CLI · Open Source
+    </div>
+
+    <h1>
+      Paste a tree.<br>
+      Get a <em>project</em>.
+    </h1>
+
+    <p class="hero-sub">
+      Drop any folder structure into your terminal. Press <strong>CTRL+Z</strong>. Your entire project scaffold is created in milliseconds — no config, no GUI, no ceremony.
+    </p>
+
+    <div class="hero-ctas">
+      <a href="#install" class="btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download f9
+      </a>
+      <a href="https://github.com/forex911/F9-Paste2Project" target="_blank" class="btn-ghost">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div>
+        <div class="stat-val">10×</div>
+        <div class="stat-label">Faster setup</div>
+      </div>
+      <div>
+        <div class="stat-val">0</div>
+        <div class="stat-label">Dependencies</div>
+      </div>
+      <div>
+        <div class="stat-val">&lt;1s</div>
+        <div class="stat-label">Scaffold time</div>
+      </div>
+    </div>
   </div>
 
-  <h1 style="z-index:1">
-    Paste <span class="hl">→</span> Press <span class="hl2">→</span><br>Project Ready
-  </h1>
-
-  <p class="hero-sub" style="z-index:1">
-    Drop a folder tree. Hit <strong style="color:var(--text)">CTRL+Z</strong>. Watch your entire project scaffold in seconds. No GUI. No config. Pure CLI speed.
-  </p>
-
-  <div class="hero-ctas" style="z-index:1">
-    <a href="#install" class="btn-primary">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Download f9
-    </a>
-    <a href="https://github.com/forex911/F9-Paste2Project" target="_blank" class="btn-ghost">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/></svg>
-      View on GitHub
-    </a>
-  </div>
-
-  <!-- Terminal -->
-  <div class="terminal-wrap" style="z-index:1">
+  <div class="hero-right">
     <div class="terminal">
       <div class="term-header">
         <div class="term-dot td-red"></div>
@@ -617,38 +746,39 @@
         <div id="line7"><span class="term-tree">├── public/</span></div>
         <div id="line8"><span class="term-tree">│   └── index.html</span></div>
         <div id="line9"><span class="term-tree">└── package.json</span></div>
-        <div id="line10">
-          <span class="term-success">✓ Created 3 dirs, 4 files → my-app/ [0.08s]</span>
-        </div>
+        <div id="line10"><span class="term-success">✓ Created 3 dirs, 4 files → my-app/ [0.08s]</span></div>
         <span class="term-cursor"></span>
       </div>
     </div>
+    <div class="term-label">Live terminal preview</div>
   </div>
 </section>
 
 <!-- ────────── HOW IT WORKS ────────── -->
 <section id="how">
-  <div class="section-label">Process</div>
-  <h2>Three steps.<br>That's it.</h2>
-  <p class="section-sub">No config files. No interactive prompts. Just paste and go.</p>
+  <div class="section-header">
+    <div class="section-label">Process</div>
+    <h2>Three steps.<br>That's <em>all</em>.</h2>
+    <p class="section-sub">No configuration files. No interactive prompts. Paste and go.</p>
+  </div>
 
   <div class="steps-grid">
     <div class="step-card">
-      <div class="step-num">01</div>
+      <div class="step-num">Step 01</div>
       <h3>Run the tool</h3>
-      <p>Open your terminal. Type one command. f9 starts listening immediately — no flags, no arguments needed.</p>
+      <p>Open your terminal and type one command. f9 starts listening immediately — no flags, no arguments required.</p>
       <div class="step-code">$ f9</div>
     </div>
     <div class="step-card">
-      <div class="step-num">02</div>
+      <div class="step-num">Step 02</div>
       <h3>Paste your structure</h3>
       <p>Copy any folder tree from GitHub, a README, an AI assistant, or your notes. Paste it directly into the terminal.</p>
       <div class="step-code">Ctrl+V → paste tree</div>
     </div>
     <div class="step-card">
-      <div class="step-num">03</div>
+      <div class="step-num">Step 03</div>
       <h3>Press CTRL+Z</h3>
-      <p>Signal EOF. f9 parses indentation, detects folders vs files, and creates everything instantly.</p>
+      <p>Signal end-of-file. f9 parses indentation, detects folders and files, and creates everything instantly.</p>
       <div class="step-key">
         <kbd class="kbd">CTRL</kbd>+<kbd class="kbd">Z</kbd>
         → project created
@@ -659,48 +789,50 @@
 
 <!-- ────────── FEATURES ────────── -->
 <section id="features">
-  <div class="section-label">Capabilities</div>
-  <h2>Everything you need.<br>Nothing you don't.</h2>
-  <p class="section-sub">Built for speed. Engineered for precision.</p>
+  <div class="section-header">
+    <div class="section-label">Capabilities</div>
+    <h2>Everything you need.<br><em>Nothing</em> you don't.</h2>
+    <p class="section-sub">Built for speed. Engineered for precision.</p>
+  </div>
 
   <div class="features-grid">
     <div class="feat-card">
-      <div class="feat-icon">📁</div>
+      <div class="feat-tag">Directories</div>
       <h3>Auto-create Folders</h3>
       <p>Detects directory entries automatically based on trailing slashes and indentation depth.</p>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">📄</div>
+      <div class="feat-tag">Files</div>
       <h3>File Generation</h3>
       <p>Creates empty files with correct extensions exactly where they belong in the tree.</p>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">🌲</div>
+      <div class="feat-tag">Parsing</div>
       <h3>Tree Structure Support</h3>
       <p>Handles standard tree formats — │, ├──, └── — the same output you'd copy from any OS or tool.</p>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">⚡</div>
+      <div class="feat-tag">Intelligence</div>
       <h3>Smart Indentation</h3>
       <p>Parses mixed indentation styles: spaces, tabs, or tree-drawing characters alike.</p>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">🪶</div>
+      <div class="feat-tag">Performance</div>
       <h3>Lightweight & Fast</h3>
       <p>Zero dependencies. Runs in milliseconds. Binary under 1MB — fits on a USB drive.</p>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">🪟</div>
+      <div class="feat-tag">Platform</div>
       <h3>Windows CLI Native</h3>
       <p>Built for Windows CMD and PowerShell. One installer batch file — no PATH gymnastics.</p>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">📋</div>
+      <div class="feat-tag">I/O</div>
       <h3>Stdin-based Input</h3>
       <p>Reads directly from stdin. Composable with pipes, scripts, and automation workflows.</p>
     </div>
     <div class="feat-card">
-      <div class="feat-icon">🔒</div>
+      <div class="feat-tag">Privacy</div>
       <h3>Offline & Private</h3>
       <p>No internet. No telemetry. No account. Your project structure stays on your machine.</p>
     </div>
@@ -709,15 +841,17 @@
 
 <!-- ────────── DEMO ────────── -->
 <section id="demo">
-  <div class="section-label">Live Preview</div>
-  <h2>Input → Output</h2>
-  <p class="section-sub">What you paste versus what gets created on disk.</p>
+  <div class="section-header">
+    <div class="section-label">Live Preview</div>
+    <h2>Input <em>→</em> Output</h2>
+    <p class="section-sub">What you paste versus what gets created on disk.</p>
+  </div>
 
   <div class="demo-split">
     <div class="demo-box">
       <div class="demo-box-header">
-        <div class="demo-dot in"></div>
-        INPUT — Pasted tree
+        <div class="demo-badge in"></div>
+        Input — Pasted tree
       </div>
       <div class="demo-body">
         <div class="demo-tree">backend-api/</div>
@@ -738,21 +872,20 @@
 
     <div class="demo-box">
       <div class="demo-box-header">
-        <div class="demo-dot out"></div>
-        OUTPUT — Created on disk
+        <div class="demo-badge out"></div>
+        Output — Created on disk
       </div>
       <div class="demo-body">
-        <div style="color:var(--muted); font-size:.75rem; margin-bottom:12px;">✓ 5 directories created</div>
-        <div class="demo-file">📁 backend-api/src/controllers/</div>
-        <div class="demo-file">📄 authController.js</div>
-        <div class="demo-file">📄 userController.js</div>
-        <div class="demo-file">📁 backend-api/src/models/</div>
-        <div class="demo-file">📄 User.js</div>
-        <div class="demo-file">📁 backend-api/src/routes/</div>
-        <div class="demo-file">📄 api.js</div>
-        <div class="demo-file">📄 app.js</div>
-        <div class="demo-file">📄 .env &nbsp;&nbsp;📄 .gitignore &nbsp;&nbsp;📄 package.json</div>
-        <div style="color:var(--accent3); margin-top:12px; font-size:.78rem;">✓ Done in 0.06s</div>
+        <div style="color:rgba(255,255,255,.3); font-size:.72rem; margin-bottom:14px; font-family:var(--mono); letter-spacing:.06em; text-transform:uppercase;">5 directories · 7 files</div>
+        <div class="demo-file">backend-api/src/controllers/</div>
+        <div class="demo-file">  authController.js</div>
+        <div class="demo-file">  userController.js</div>
+        <div class="demo-file">backend-api/src/models/</div>
+        <div class="demo-file">  User.js</div>
+        <div class="demo-file">backend-api/src/routes/</div>
+        <div class="demo-file">  api.js</div>
+        <div class="demo-file">app.js · .env · .gitignore · package.json</div>
+        <div style="color:#7DB87D; margin-top:16px; font-size:.76rem; font-family:var(--mono);">✓ Completed in 0.06s</div>
       </div>
     </div>
   </div>
@@ -760,47 +893,52 @@
 
 <!-- ────────── USE CASES ────────── -->
 <section id="usecases">
-  <div class="section-label">Use Cases</div>
-  <h2>Built for every<br>developer context.</h2>
+  <div class="section-header">
+    <div class="section-label">Use Cases</div>
+    <h2>Built for every<br>developer <em>context</em>.</h2>
+  </div>
 
   <div class="usecase-grid">
     <div class="uc-card">
-      <div class="uc-emoji">🚀</div>
+      <div class="uc-label">Prototyping</div>
       <h3>Start Projects Instantly</h3>
-      <p>Scaffold any new project from a tree in your notes or docs.</p>
+      <p>Scaffold any new project from a tree in your notes or documentation.</p>
     </div>
     <div class="uc-card">
-      <div class="uc-emoji">🐙</div>
+      <div class="uc-label">Open Source</div>
       <h3>Recreate GitHub Repos</h3>
       <p>Copy a repo's file tree from the README and recreate the structure locally.</p>
     </div>
     <div class="uc-card">
-      <div class="uc-emoji">🏆</div>
-      <h3>Competitive Programming</h3>
-      <p>Instant boilerplate folder structures for contest submissions.</p>
+      <div class="uc-label">Competitive Programming</div>
+      <h3>Contest Submissions</h3>
+      <p>Instant boilerplate folder structures for competitive programming submissions.</p>
     </div>
     <div class="uc-card">
-      <div class="uc-emoji">🧪</div>
-      <h3>Test Folder Structures</h3>
-      <p>Validate your architecture ideas before writing a single line of code.</p>
+      <div class="uc-label">Architecture</div>
+      <h3>Validate Structures</h3>
+      <p>Test your architecture ideas before writing a single line of code.</p>
     </div>
     <div class="uc-card">
-      <div class="uc-emoji">⚡</div>
+      <div class="uc-label">Speed</div>
       <h3>Hackathon Sprints</h3>
-      <p>Set up a complete project skeleton in under 10 seconds.</p>
+      <p>Set up a complete project skeleton in under ten seconds.</p>
     </div>
     <div class="uc-card">
-      <div class="uc-emoji">🎓</div>
-      <h3>Placement Prep</h3>
-      <p>Quickly replicate project structures from tutorials and courses.</p>
+      <div class="uc-label">Learning</div>
+      <h3>Tutorial Replication</h3>
+      <p>Quickly replicate project structures from tutorials and online courses.</p>
     </div>
   </div>
 </section>
 
 <!-- ────────── WHY F9 ────────── -->
 <section id="why">
-  <div class="section-label">Value Proposition</div>
-  <h2>Why developers<br>choose f9.</h2>
+  <div class="section-header">
+    <div class="section-label">Value Proposition</div>
+    <h2>Why developers<br>choose <em>f9</em>.</h2>
+    <p class="section-sub">Simple tools done right compound over a career.</p>
+  </div>
 
   <div class="why-grid">
     <div class="why-card">
@@ -823,15 +961,17 @@
 
 <!-- ────────── INSTALL ────────── -->
 <section id="install">
-  <div class="section-label">Installation</div>
-  <h2>Up and running<br>in 60 seconds.</h2>
-  <p class="section-sub">Three commands. One batch file. You're done.</p>
+  <div class="section-header">
+    <div class="section-label">Installation</div>
+    <h2>Up and running<br>in <em>60 seconds</em>.</h2>
+    <p class="section-sub">Three commands. One batch file. You're done.</p>
+  </div>
 
   <div class="install-box">
     <div class="install-header">
       <span class="install-title">Windows CMD / PowerShell</span>
       <button class="copy-btn" onclick="copyInstall(this)">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         Copy
       </button>
     </div>
@@ -846,21 +986,23 @@
       <div><span class="i-run">f9_Installer.bat</span></div>
       <div>&nbsp;</div>
       <div><span class="i-comment"># Done — f9 is now available globally</span></div>
-      <div><span class="i-cmd">f9</span> <span class="i-comment">← run from anywhere</span></div>
+      <div><span class="i-cmd">f9</span> <span class="i-comment">&nbsp;← run from anywhere</span></div>
     </div>
   </div>
 </section>
 
 <!-- ────────── ROADMAP ────────── -->
 <section id="roadmap">
-  <div class="section-label">Roadmap</div>
-  <h2>What's next<br>for f9.</h2>
+  <div class="section-header">
+    <div class="section-label">Roadmap</div>
+    <h2>What's next<br>for <em>f9</em>.</h2>
+  </div>
 
   <div class="road-grid">
     <div class="road-card">
       <div class="road-tag tag-soon">Coming Soon</div>
       <h3>Linux / macOS Support</h3>
-      <p>Native shell support — bash and zsh. Full cross-platform compatibility.</p>
+      <p>Native shell support for bash and zsh. Full cross-platform compatibility.</p>
     </div>
     <div class="road-card">
       <div class="road-tag tag-planned">Planned</div>
@@ -880,19 +1022,22 @@
     <div class="road-card">
       <div class="road-tag tag-idea">Idea</div>
       <h3>AI-Powered Input</h3>
-      <p>Describe a project in plain English — f9 asks an LLM and scaffolds automatically.</p>
+      <p>Describe a project in plain English — f9 generates and scaffolds the structure automatically.</p>
     </div>
     <div class="road-card">
       <div class="road-tag tag-idea">Idea</div>
       <h3>Reverse Mode</h3>
-      <p>Point f9 at a folder and export its structure as a pasteable tree string.</p>
+      <p>Point f9 at a folder and export its structure as a shareable tree string.</p>
     </div>
   </div>
 </section>
 
 <!-- ────────── FOOTER ────────── -->
 <footer>
-  <div class="footer-logo">f9<span>_paste2project</span></div>
+  <div class="footer-logo">
+    <div class="footer-logo-mark">f9</div>
+    paste2project
+  </div>
   <div class="footer-links">
     <a href="https://github.com/forex911/F9-Paste2Project" target="_blank">GitHub</a>
     <a href="#install">Install</a>
@@ -900,7 +1045,7 @@
     <a href="#">MIT License</a>
     <a href="https://github.com/forex911">Author</a>
   </div>
-  <div class="footer-right">Built with ❤ for developers who hate repetitive work.</div>
+  <div class="footer-right">Open source · MIT License · 2025</div>
 </footer>
 
 <script>
@@ -911,18 +1056,14 @@
       'f9_Installer.bat'
     ];
     navigator.clipboard.writeText(lines.join('\n')).then(() => {
-      btn.textContent = '✓ Copied!';
-      btn.style.color = 'var(--accent3)';
-      btn.style.borderColor = 'var(--accent3)';
+      btn.textContent = '✓ Copied';
       setTimeout(() => {
-        btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
-        btn.style.color = '';
-        btn.style.borderColor = '';
+        btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg> Copy`;
       }, 2000);
     });
   }
 
-  // Intersection Observer for fade-in animations
+  // Scroll-reveal
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(e => {
       if (e.isIntersecting) {
@@ -930,12 +1071,12 @@
         e.target.style.transform = 'translateY(0)';
       }
     });
-  }, { threshold: 0.1 });
+  }, { threshold: 0.08 });
 
-  document.querySelectorAll('.feat-card, .step-card, .uc-card, .why-card, .road-card').forEach(el => {
+  document.querySelectorAll('.feat-card, .step-card, .uc-card, .why-card, .road-card').forEach((el, i) => {
     el.style.opacity = '0';
-    el.style.transform = 'translateY(24px)';
-    el.style.transition = 'opacity .5s ease, transform .5s ease';
+    el.style.transform = 'translateY(18px)';
+    el.style.transition = `opacity .45s ease ${(i % 4) * .06}s, transform .45s ease ${(i % 4) * .06}s`;
     observer.observe(el);
   });
 </script>
