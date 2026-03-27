@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
 """
-f9.py — Create directory/file structures from tree-format input.
+tree_creator.py — Create directory/file structures from tree-format input.
+
+Handles:
+  - Clean Unix  'tree' output
+  - Windows     'tree /f' output  (including malformed/mixed indentation)
+  - Hand-drawn  ASCII trees
 
 Usage:
-  python f9.py                        # paste from stdin (interactive)
-  python f9.py -f structure.txt       # read from file
-  python f9.py -c                     # read from clipboard
-  python f9.py --dry-run              # preview without creating
-  python f9.py --undo                 # remove last created structure
-  python f9.py -o /some/base/dir      # output to specific base directory
-  python f9.py -q                     # quiet mode (no per-item output)
-  python f9.py -v                     # verbose mode (extra detail)
-  python f9.py --log output.log       # also write log to file
+  python tree_creator.py                        # paste from stdin (interactive)
+  python tree_creator.py -f structure.txt       # read from file
+  python tree_creator.py -c                     # read from clipboard
+  python tree_creator.py --dry-run              # preview without creating
+  python tree_creator.py --undo                 # remove last created structure
+  python tree_creator.py -o /some/base/dir      # output to specific base directory
+  python tree_creator.py -q                     # quiet mode (no per-item output)
+  python tree_creator.py -v                     # verbose mode (extra detail)
+  python tree_creator.py --log output.log       # also write log to file
 """
 
 import os
+import re
 import sys
 import json
-import shutil
 import argparse
 import datetime
 from pathlib import Path
@@ -31,7 +36,6 @@ CYAN   = "\033[36m"
 YELLOW = "\033[33m"
 RED    = "\033[31m"
 DIM    = "\033[2m"
-BLUE   = "\033[34m"
 
 def supports_color() -> bool:
     return hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
@@ -50,73 +54,157 @@ def error(msg):   print(c(msg, RED, BOLD), file=sys.stderr)
 def dim(msg):     print(c(msg, DIM))
 
 
-# ── Tree parsing ──────────────────────────────────────────────────────────────
+# ── Skip-line patterns ────────────────────────────────────────────────────────
 
-TREE_CHARS = set("│├─└ ")
+SKIP_LINE_RE = re.compile(
+    r'^\s*(?:'
+    r'Folder PATH listing'
+    r'|Volume (?:serial number|in drive)'
+    r'|[A-Za-z]:[.\\/]?$'
+    r'|[A-Za-z]:\\.*>tree'
+    r')',
+    re.IGNORECASE,
+)
 
-def get_level(line: str) -> int:
-    """Determine nesting depth, ignoring tree-drawing characters."""
-    indent = 0
-    for ch in line:
-        if ch in TREE_CHARS:
-            indent += 1
-        elif ch == " ":
-            indent += 1
-        else:
-            break
-    return indent // 4
+# Characters that are pure tree-graphics (never part of a file name)
+TREE_GRAPHIC_CHARS = frozenset('│├└─|\\')
 
-def clean_name(line: str) -> str:
-    """Strip tree graphics, inline comments, and return the bare name."""
-    stripped = line.strip()
-    for ch in "│├─└ ─":
-        stripped = stripped.lstrip(ch)
-    # Strip inline comments (e.g. "app.py  # main backend")
-    if "#" in stripped:
-        stripped = stripped[:stripped.index("#")]
-    return stripped.rstrip("/").strip()
 
-def is_comment(line: str) -> bool:
-    """Lines starting with # (after stripping tree chars) are comments."""
-    return clean_name(line).startswith("#")
+# ── Name extraction ───────────────────────────────────────────────────────────
+
+def extract_name(line: str) -> str:
+    """Strip all tree-drawing chars and return the bare file/dir name."""
+    name = re.sub(r'[│├└─|\\]', '', line).strip()
+    if '#' in name:
+        name = name[:name.index('#')]
+    return name.rstrip('/').strip()
+
+
+def name_column(line: str) -> int:
+    """
+    Return the 0-based column index of the first character that is NOT a
+    tree-graphic character or whitespace.  This is the raw indent level
+    signal that works even for malformed / mixed Windows tree /f output.
+    """
+    for i, ch in enumerate(line):
+        if ch not in TREE_GRAPHIC_CHARS and ch not in ' \t':
+            return i
+    return 0
+
+
+def is_dir_hint(line: str) -> bool:
+    """True when the line explicitly ends with '/' before any comment."""
+    clean = line[:line.index('#')] if '#' in line else line
+    return clean.rstrip().endswith('/')
+
+
+def is_purely_structural(line: str) -> bool:
+    """True when the line contains nothing but tree-graphic chars / spaces."""
+    return not re.sub(r'[│├└─|\\  \t]', '', line).strip()
+
+
+# ── Level normalisation ───────────────────────────────────────────────────────
+
+def normalise_levels(raw_col: list[int]) -> list[int]:
+    """
+    Convert raw column positions into 0-based nesting levels.
+
+    Strategy
+    --------
+    1. Find the minimum column (= level 0).
+    2. Collect the sorted unique columns and map them to 0, 1, 2 …
+       This is robust to any indent step size (4, 8, 2 …) and to
+       the column offset introduced by Windows tree /f's leading │ chars.
+    """
+    if not raw_col:
+        return []
+    unique_sorted = sorted(set(raw_col))
+    col_to_level  = {col: lvl for lvl, col in enumerate(unique_sorted)}
+    return [col_to_level[c] for c in raw_col]
+
+
+# ── Main parser ───────────────────────────────────────────────────────────────
 
 def validate_name(name: str) -> tuple[bool, str]:
-    """Return (ok, reason). Reject dangerous or invalid names."""
     if not name:
         return False, "empty name"
-    bad_chars = set('<>:"|?*\x00')
-    if any(ch in bad_chars for ch in name):
-        return False, f"contains illegal character(s): {bad_chars & set(name)}"
-    # Prevent path traversal
+    if any(ch in '<>"|?*\x00' for ch in name):
+        return False, "illegal character(s)"
     if ".." in Path(name).parts:
-        return False, "path traversal ('..')"
+        return False, "path traversal"
     if Path(name).is_absolute():
-        return False, "absolute paths are not allowed"
+        return False, "absolute path"
     return True, ""
+
 
 def parse_lines(lines: list[str]) -> list[dict]:
     """
     Parse tree-formatted lines into a flat list of
-    {'name', 'is_dir', 'level'} dicts.
+      {'name': str, 'is_dir': bool, 'level': int}
+
+    Works for:
+      • Unix  'tree'   — 4-char indent groups (│   ├── └──)
+      • Windows 'tree /f' — even when the output is malformed / mixed
+      • Hand-drawn ASCII trees
     """
-    entries = []
+    pre_entries: list[dict] = []   # before level normalisation
+
     for raw in lines:
-        line = raw.rstrip()
-        if not line or line.isspace() or is_comment(line):
+        line = raw.rstrip('\n\r')
+
+        if not line or not line.strip():
             continue
-        level  = get_level(line)
-        name   = clean_name(line)
+        if SKIP_LINE_RE.match(line.strip()):
+            continue
+        if is_purely_structural(line):
+            continue
+
+        name = extract_name(line)
         if not name:
             continue
-        # Strip inline comment before checking for trailing slash
-        # e.g. "uploads/            # temp images" → is_dir = True
-        line_no_comment = line[:line.index("#")].rstrip() if "#" in line else line
-        is_dir = line_no_comment.endswith("/")
+        # Skip bare drive-root tokens like "C:."
+        if re.fullmatch(r'[A-Za-z]:[.\\/]?', name):
+            continue
+        if name.startswith('#'):
+            continue
+
         ok, reason = validate_name(name)
         if not ok:
-            warn(f"  ⚠  Skipping invalid entry {name!r}: {reason}")
+            warn(f"  ⚠  Skipping {name!r}: {reason}")
             continue
-        entries.append({"name": name, "is_dir": is_dir, "level": level})
+
+        pre_entries.append({
+            "name":      name,
+            "raw_col":   name_column(line),
+            "_hint_dir": is_dir_hint(line),
+        })
+
+    if not pre_entries:
+        return []
+
+    # ── Normalise raw columns → levels ──────────────────────────────────────
+    levels = normalise_levels([e["raw_col"] for e in pre_entries])
+
+    entries: list[dict] = []
+    for e, lvl in zip(pre_entries, levels):
+        entries.append({
+            "name":      e["name"],
+            "level":     lvl,
+            "is_dir":    e["_hint_dir"],
+            "_hint_dir": e["_hint_dir"],
+        })
+
+    # ── Infer directories from structure ────────────────────────────────────
+    # Any entry whose next sibling/child has a deeper level is a directory.
+    for i, entry in enumerate(entries):
+        if entry["_hint_dir"]:
+            entry["is_dir"] = True
+        elif i + 1 < len(entries) and entries[i + 1]["level"] > entry["level"]:
+            entry["is_dir"] = True
+        else:
+            entry["is_dir"] = False
+        del entry["_hint_dir"]
+
     return entries
 
 
@@ -124,24 +212,25 @@ def parse_lines(lines: list[str]) -> list[dict]:
 
 UNDO_FILE = Path(".tree_creator_undo.json")
 
+
 def create_structure(
-    entries:    list[dict],
-    base_dir:   Path,
-    dry_run:    bool  = False,
-    quiet:      bool  = False,
-    verbose:    bool  = False,
-    log_lines:  list  = None,
+    entries:   list[dict],
+    base_dir:  Path,
+    dry_run:   bool = False,
+    quiet:     bool = False,
+    verbose:   bool = False,
+    log_lines: "list | None" = None,
 ) -> dict:
     """
     Walk entries and create dirs/files under base_dir.
-    Returns a summary dict.
+    path_stack tracks the chain of ancestor directories so each item
+    is placed under the correct parent regardless of raw indentation.
     """
-    stack: list[str]  = []
-    paths: list[Path] = []
-    created_dirs:  list[str] = []
-    created_files: list[str] = []
-    skipped:       list[str] = []
-    errors:        list[str] = []
+    path_stack:    list[Path] = []
+    created_dirs:  list[str]  = []
+    created_files: list[str]  = []
+    skipped:       list[str]  = []
+    errors_list:   list[str]  = []
 
     def log(msg):
         if log_lines is not None:
@@ -154,66 +243,66 @@ def create_structure(
         name   = entry["name"]
         is_dir = entry["is_dir"]
 
-        # Trim stack to current depth
-        while len(stack) > level:
-            stack.pop()
-            paths.pop()
+        # Trim path_stack so it holds exactly `level` ancestor paths.
+        # level 0 → no parent  → file/dir lives directly in base_dir
+        # level 1 → one parent → lives inside path_stack[0]
+        while len(path_stack) > level:
+            path_stack.pop()
 
-        # Resolve full path
-        if not paths:
-            path = base_dir / name
-        else:
-            path = paths[-1] / name
+        parent = path_stack[-1] if path_stack else base_dir
+        path   = parent / name
 
-        rel = path.relative_to(base_dir) if base_dir != Path(".") else path
+        try:
+            rel = path.relative_to(base_dir)
+        except ValueError:
+            rel = path
 
         try:
             if is_dir:
-                label = c("DIR  ", CYAN, BOLD) if USE_COLOR else "DIR  "
+                lbl = c("DIR  ", CYAN, BOLD) if USE_COLOR else "DIR  "
                 if dry_run:
-                    log(f"  {label} [dry-run] {rel}/")
+                    log(f"  {lbl} [dry-run] {rel}/")
                 elif path.exists():
-                    log(f"  {label} {c('exists', DIM)}  {rel}/")
+                    log(f"  {lbl} {c('exists', DIM)}  {rel}/")
                     skipped.append(str(rel) + "/")
                 else:
                     path.mkdir(parents=True, exist_ok=True)
-                    log(f"  {label} {rel}/")
+                    log(f"  {lbl} {rel}/")
                     created_dirs.append(str(rel) + "/")
-
-                stack.append(name)
-                paths.append(path)
+                # Always push so children resolve under this dir
+                path_stack.append(path)
 
             else:
-                label = c("FILE ", GREEN, BOLD) if USE_COLOR else "FILE "
+                lbl = c("FILE ", GREEN, BOLD) if USE_COLOR else "FILE "
                 if dry_run:
-                    log(f"  {label} [dry-run] {rel}")
+                    log(f"  {lbl} [dry-run] {rel}")
                 elif path.exists():
-                    log(f"  {label} {c('exists', DIM)}  {rel}")
+                    log(f"  {lbl} {c('exists', DIM)}  {rel}")
                     skipped.append(str(rel))
                 else:
                     path.parent.mkdir(parents=True, exist_ok=True)
                     path.touch()
-                    log(f"  {label} {rel}")
+                    log(f"  {lbl} {rel}")
                     created_files.append(str(rel))
 
-        except PermissionError as e:
+        except PermissionError:
             msg = f"  {c('ERROR', RED, BOLD)} {rel}: permission denied"
             error(msg)
             if log_lines is not None:
                 log_lines.append(msg)
-            errors.append(str(rel))
-        except OSError as e:
-            msg = f"  {c('ERROR', RED, BOLD)} {rel}: {e}"
+            errors_list.append(str(rel))
+        except OSError as exc:
+            msg = f"  {c('ERROR', RED, BOLD)} {rel}: {exc}"
             error(msg)
             if log_lines is not None:
                 log_lines.append(msg)
-            errors.append(str(rel))
+            errors_list.append(str(rel))
 
     return {
         "created_dirs":  created_dirs,
         "created_files": created_files,
         "skipped":       skipped,
-        "errors":        errors,
+        "errors":        errors_list,
     }
 
 
@@ -228,48 +317,42 @@ def save_undo(summary: dict, base_dir: Path):
     }
     UNDO_FILE.write_text(json.dumps(data, indent=2))
 
+
 def do_undo():
     if not UNDO_FILE.exists():
-        error("No undo record found. Run a creation first.")
+        error("No undo record found.")
         sys.exit(1)
 
     data     = json.loads(UNDO_FILE.read_text())
     base_dir = Path(data["base_dir"])
     ts       = data["timestamp"]
-    dirs     = data["dirs"]
-    files    = data["files"]
 
-    warn(f"Undoing creation from {ts}")
-    warn(f"Base dir: {base_dir}")
+    warn(f"Undoing creation from {ts}  (base: {base_dir})")
 
-    # Remove files first
-    for rel in reversed(files):
+    for rel in reversed(data["files"]):
         p = base_dir / rel
         if p.exists():
             p.unlink()
             dim(f"  removed file  {rel}")
-        else:
-            dim(f"  not found     {rel}")
 
-    # Remove dirs deepest-first
-    for rel in reversed(dirs):
+    for rel in reversed(data["dirs"]):
         p = base_dir / rel.rstrip("/")
         if p.exists():
             try:
-                p.rmdir()          # only removes if empty
+                p.rmdir()
                 dim(f"  removed dir   {rel}")
             except OSError:
-                warn(f"  non-empty dir skipped: {rel}")
+                warn(f"  non-empty, skipped: {rel}")
 
     UNDO_FILE.unlink()
     success("✅ Undo complete.")
 
 
-# ── Input methods ─────────────────────────────────────────────────────────────
+# ── Input helpers ─────────────────────────────────────────────────────────────
 
 def read_stdin_interactive() -> list[str]:
     eof = "CTRL+Z then ENTER" if sys.platform == "win32" else "CTRL+D"
-    info(f"Paste your tree structure below, then press {eof}:")
+    info(f"Paste your tree structure, then press {eof}:")
     print(c("-" * 50, DIM))
     try:
         return sys.stdin.readlines()
@@ -278,19 +361,18 @@ def read_stdin_interactive() -> list[str]:
         error("Interrupted.")
         sys.exit(1)
 
+
 def read_file(path: str) -> list[str]:
     p = Path(path)
     if not p.exists():
         error(f"File not found: {path}")
-        sys.exit(1)
-    if not p.is_file():
-        error(f"Not a file: {path}")
         sys.exit(1)
     try:
         return p.read_text(encoding="utf-8").splitlines(keepends=True)
     except UnicodeDecodeError:
         error(f"Could not decode {path} as UTF-8.")
         sys.exit(1)
+
 
 def read_clipboard() -> list[str]:
     try:
@@ -302,7 +384,6 @@ def read_clipboard() -> list[str]:
             root = tk.Tk(); root.withdraw()
             text = root.clipboard_get(); root.destroy()
         else:
-            # Linux — try xclip then xsel
             try:
                 text = subprocess.check_output(
                     ["xclip", "-selection", "clipboard", "-o"], text=True
@@ -311,15 +392,15 @@ def read_clipboard() -> list[str]:
                 text = subprocess.check_output(
                     ["xsel", "--clipboard", "--output"], text=True
                 )
-    except Exception as e:
-        error(f"Clipboard read failed: {e}")
+    except Exception as exc:
+        error(f"Clipboard read failed: {exc}")
         sys.exit(1)
     return text.splitlines(keepends=True)
 
 
-# ── Summary printer ───────────────────────────────────────────────────────────
+# ── Summary ───────────────────────────────────────────────────────────────────
 
-def print_summary(summary: dict, dry_run: bool, log_lines: list = None):
+def print_summary(summary: dict, dry_run: bool):
     d = len(summary["created_dirs"])
     f = len(summary["created_files"])
     s = len(summary["skipped"])
@@ -327,9 +408,8 @@ def print_summary(summary: dict, dry_run: bool, log_lines: list = None):
 
     sep = c("─" * 50, DIM)
     print(sep)
-
     if dry_run:
-        info(f"  DRY-RUN preview — nothing was written to disk")
+        info(f"  DRY-RUN — nothing written to disk")
         info(f"  Would create: {d} dir(s), {f} file(s)")
     else:
         success(f"  ✅  Created : {d} dir(s), {f} file(s)")
@@ -337,12 +417,7 @@ def print_summary(summary: dict, dry_run: bool, log_lines: list = None):
             warn(f"  ⚠   Skipped : {s} (already existed)")
         if e:
             error(f"  ✖   Errors  : {e}")
-
     print(sep)
-
-    if log_lines is not None:
-        for line in log_lines:
-            pass  # already logged during creation
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -355,26 +430,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     src = p.add_mutually_exclusive_group()
     src.add_argument("-f", "--file",      metavar="PATH",
-                     help="Read structure from a text file")
+                     help="Read from a text file")
     src.add_argument("-c", "--clipboard", action="store_true",
-                     help="Read structure from the clipboard")
+                     help="Read from the clipboard")
 
-    p.add_argument("-o", "--output-dir",  metavar="DIR", default=".",
-                   help="Base directory to create structure in (default: cwd)")
-    p.add_argument("--dry-run",           action="store_true",
-                   help="Preview what would be created without touching the filesystem")
-    p.add_argument("--undo",              action="store_true",
-                   help="Remove the last created structure (uses undo record)")
-    p.add_argument("--no-color",          action="store_true",
+    p.add_argument("-o", "--output-dir", metavar="DIR", default=".",
+                   help="Base directory (default: cwd)")
+    p.add_argument("--dry-run",          action="store_true",
+                   help="Preview without touching the filesystem")
+    p.add_argument("--undo",             action="store_true",
+                   help="Remove the last created structure")
+    p.add_argument("--no-color",         action="store_true",
                    help="Disable coloured output")
 
-    verbosity = p.add_mutually_exclusive_group()
-    verbosity.add_argument("-q", "--quiet",   action="store_true",
-                           help="Suppress per-item output; show only summary")
-    verbosity.add_argument("-v", "--verbose", action="store_true",
-                           help="Show extra detail")
-    p.add_argument("--log",               metavar="FILE",
-                   help="Write output to a log file as well")
+    vg = p.add_mutually_exclusive_group()
+    vg.add_argument("-q", "--quiet",   action="store_true",
+                    help="Suppress per-item output")
+    vg.add_argument("-v", "--verbose", action="store_true",
+                    help="Extra detail")
+    p.add_argument("--log", metavar="FILE",
+                   help="Also write output to a log file")
     return p
 
 
@@ -386,25 +461,22 @@ def main():
     if args.no_color:
         USE_COLOR = False
 
-    # ── Undo mode ──────────────────────────────────────────────────────────────
     if args.undo:
         do_undo()
         return
 
-    # ── Resolve base dir ───────────────────────────────────────────────────────
     base_dir = Path(args.output_dir).resolve()
     if not base_dir.exists():
         try:
             base_dir.mkdir(parents=True)
             info(f"Created output directory: {base_dir}")
-        except OSError as e:
-            error(f"Cannot create output directory {base_dir}: {e}")
+        except OSError as exc:
+            error(f"Cannot create {base_dir}: {exc}")
             sys.exit(1)
     if not base_dir.is_dir():
-        error(f"Output path is not a directory: {base_dir}")
+        error(f"Not a directory: {base_dir}")
         sys.exit(1)
 
-    # ── Read input ─────────────────────────────────────────────────────────────
     if args.file:
         lines = read_file(args.file)
         if not args.quiet:
@@ -417,29 +489,25 @@ def main():
         lines = read_stdin_interactive()
 
     if not lines:
-        error("No input received. Nothing to do.")
+        error("No input received.")
         sys.exit(1)
 
-    # ── Parse ──────────────────────────────────────────────────────────────────
     entries = parse_lines(lines)
     if not entries:
         error("No valid entries found after parsing.")
         sys.exit(1)
 
     if args.verbose and not args.quiet:
-        dim(f"  Parsed {len(entries)} entries")
+        dim(f"  Entries parsed: {len(entries)}")
 
-    # ── Header ─────────────────────────────────────────────────────────────────
     if not args.quiet:
         label = c("DRY-RUN — ", YELLOW, BOLD) if args.dry_run else ""
         print()
         info(f"  {label}Output → {base_dir}")
         print(c("─" * 50, DIM))
 
-    # ── Log file setup ─────────────────────────────────────────────────────────
-    log_lines: list | None = [] if args.log else None
+    log_lines: "list | None" = [] if args.log else None
 
-    # ── Create ─────────────────────────────────────────────────────────────────
     summary = create_structure(
         entries,
         base_dir=base_dir,
@@ -449,16 +517,13 @@ def main():
         log_lines=log_lines,
     )
 
-    # ── Summary ────────────────────────────────────────────────────────────────
-    print_summary(summary, dry_run=args.dry_run, log_lines=log_lines)
+    print_summary(summary, dry_run=args.dry_run)
 
-    # ── Save undo record ───────────────────────────────────────────────────────
     if not args.dry_run and (summary["created_dirs"] or summary["created_files"]):
         save_undo(summary, base_dir)
         if args.verbose:
-            dim(f"  Undo record saved to {UNDO_FILE}")
+            dim(f"  Undo record → {UNDO_FILE}")
 
-    # ── Write log file ─────────────────────────────────────────────────────────
     if args.log and log_lines is not None:
         try:
             with open(args.log, "w", encoding="utf-8") as fh:
@@ -466,11 +531,10 @@ def main():
                 fh.write(f"base_dir: {base_dir}\n")
                 fh.write("─" * 50 + "\n")
                 fh.write("\n".join(log_lines) + "\n")
-            dim(f"  Log written → {args.log}")
-        except OSError as e:
-            warn(f"Could not write log: {e}")
+            dim(f"  Log → {args.log}")
+        except OSError as exc:
+            warn(f"Could not write log: {exc}")
 
-    # Exit non-zero if there were errors
     if summary["errors"]:
         sys.exit(1)
 
