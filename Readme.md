@@ -41,7 +41,7 @@ f9/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/f9.git
+git clone https://github.com/forex911/f9-paste2project.git
 cd f9
 ```
 
